@@ -206,8 +206,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           onPressed: () async {
                             if(messageText != ''){
                               _textController.clear();
+                              //Synchronizing Messages
                               while(!counterAccessPermit) {
-                                //loop until counterAccessPermit == true
+                                //[1] loop until counterAccessPermit == true
                                 await _firestore.collection('groups').doc(hexGroupID).get().then(
                                         (doc){
                                       setState(() {
@@ -216,11 +217,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                     }
                                 );
                               }
-                              //set access permission to false for other incoming messages until this message gets updated
+                              //[2] set access permission to false for other incoming messages until this message gets updated
                               await _firestore.collection('groups').doc(hexGroupID).update({
                                 'canAccess' : false,
                               });
-                              //access the message counter to place the message widget at bottom
+                              //[3] access the message counter to place the message widget at bottom
                               await _firestore.collection('groups').doc(hexGroupID).get().then(
                                   (doc){
                                     setState(() {
@@ -228,7 +229,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     });
                                   }
                               );
-                              //add the message doc into the DB collection
+                              //[4] add the message doc into the DB collection
                               await _firestore
                                   .collection(ChatScreen.groupName)
                                   .doc((messageCounter+1).decToHex(20).toString())
@@ -239,11 +240,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                 'name': loggedInUser.displayName,
                                 'text': messageText
                               });
-                              //increment the message counter by one
+                              //[5] increment the message counter by one
                               await _firestore.collection('groups').doc(hexGroupID).update({
                                 'msgCounter' : messageCounter+1,
                               });
-                              //set the access permission to true
+                              //[6] set the access permission to true
                               await _firestore.collection('groups').doc(hexGroupID).update({
                                 'canAccess' : true,
                               });

@@ -86,6 +86,8 @@ class _AddGroupScreenState extends State<AddGroupScreen> {
                     _firestore.collection('groups').doc((++groupCounter).decToHex(20).toString()).set({
                       'groupID' : groupCounter,
                       'name' : newGroupName,
+                      'canAccess' : true,   //initially
+                      'msgCounter' : 0,     //initially
                     });
                     _controller.clear();
                     Navigator.pop(context);

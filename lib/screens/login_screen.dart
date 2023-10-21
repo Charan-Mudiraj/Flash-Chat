@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flashchat/resources/authentication_button.dart';
 import 'package:flashchat/resources/constants.dart';
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 class LoginScreen extends StatefulWidget {
   static String id = 'login_screen';
   @override
@@ -15,19 +16,21 @@ class _LoginScreenState extends State<LoginScreen> {
   late String email;
   late String password;
   bool showSpinner = false;
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('images/background.png'),
-            fit: BoxFit.cover,
-          )
-        ),
-        child: ModalProgressHUD(
-          inAsyncCall: showSpinner,
+      body: ModalProgressHUD(
+        inAsyncCall: showSpinner,
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('images/background.png'),
+              fit: BoxFit.cover,
+            )
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
@@ -83,8 +86,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         showSpinner = true;
                       });
                       try{
-                        final user = await _auth.signInWithEmailAndPassword(email: email, password: password);
+                        await _auth.signInWithEmailAndPassword(email: email, password: password);
+                        final user = _auth.currentUser;
                         if(user != null){
+                          final SharedPreferences prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('isSignedIn', true);
+                          await prefs.setString('email', email);
+                          await prefs.setString('password', password);
+
                           Navigator.pushNamed(context, GroupScreen.id);
                         };
                         setState(() {

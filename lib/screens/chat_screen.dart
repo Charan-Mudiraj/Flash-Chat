@@ -20,16 +20,18 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _auth = FirebaseAuth.instance;
   late User loggedInUser;
-  late String messageText;
+  String messageText = '';
   final _firestore = FirebaseFirestore.instance;
   final TextEditingController _textController = TextEditingController();
   late int messageCounter;
   final ScrollController _scrollController = ScrollController();
+  bool counterAccessPermit = false;
+  final String hexGroupID = ChatScreen.groupID.decToHex(20).toString();
+  int _scrollJumpCount = 1;
   @override
   void initState() {
     super.initState();
     getCurrentUser();
-    updateMessageCounter();
   }
 
   void getCurrentUser() {
@@ -37,34 +39,6 @@ class _ChatScreenState extends State<ChatScreen> {
     if (user != null) {
       loggedInUser = user;
     }
-  }
-
-  // void getCurrentMessages() async {
-  //   final messages = await _firestore.collection('messages').doc('ueipDywXOAwr4lcoJ8Ae');
-  //   messages.get().then((value){
-  //     final data = value.data() as Map<String, dynamic>;
-  //     print(data);
-  //   });
-  // }
-  // void messagesStream() async {
-  //   await for (var snapshot in _firestore.collection('messages').snapshots()){
-  //     for(var message in snapshot.size){
-  //       print(message.data());
-  //     }
-  //   }
-  // }
-  void _scrollDown(){
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: const Duration(seconds: 1),
-      curve: Curves.fastOutSlowIn,
-    );
-  }
-  void updateMessageCounter() async {
-    await _firestore.collection(ChatScreen.groupName).count().get().then(
-          (res) => messageCounter = res.count,
-          onError: (e) => print(e),
-        );
   }
 
   @override
@@ -110,11 +84,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   title: 'Confirm deletion',
                   description:
                       'Are you sure you want to delete all the messages?',
-                  onYes: () {
+                  onYes: (){
                     _firestore.collection(ChatScreen.groupName).get().then((snapShot){
                       for(QueryDocumentSnapshot doc in snapShot.docs){
                         _firestore.collection(ChatScreen.groupName).doc(doc.id).delete();
                       }
+                    });
+                    setState(() {
+                      messageCounter = 0;
                     });
                     Navigator.pop(context);
                   },
@@ -139,33 +116,45 @@ class _ChatScreenState extends State<ChatScreen> {
                 stream: _firestore.collection(ChatScreen.groupName).snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
-                    final messages = snapshot.data?.docs;
-                    List<Widget> messageWidgets = [];
-                    for (var message in messages!) {
+                    final messages = snapshot.data!.docs;
+                    List<Widget> dbMessageWidgets = [];
+                    for (var message in messages) {
                       final int docID = message['docID'];
                       final String senderName = message['name'];
                       final String messageSender = message['sender'];
                       final String messageText = message['text'];
                       if (messageSender == loggedInUser.email) {
-                        messageWidgets.add(FloatingMessage(
+                        dbMessageWidgets.add(FloatingMessage(
                             docID: docID,
                             groupName: ChatScreen.groupName,
                             name: senderName,
                             text: messageText,
                             isCurrentUser: true));
                       } else {
-                        messageWidgets.add(FloatingMessage(
+                        dbMessageWidgets.add(FloatingMessage(
                             docID: docID,
                             groupName: ChatScreen.groupName,
                             name: senderName,
                             text: messageText,
                             isCurrentUser: false));
                       }
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if(_scrollJumpCount > 0){
+                          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+                          _scrollJumpCount--;
+                        }else{
+                          _scrollController.animateTo(
+                            _scrollController.position.maxScrollExtent,
+                            duration: Duration(milliseconds: 250),
+                            curve: Curves.fastOutSlowIn,
+                          );
+                        }
+                      });
                     }
                     return Expanded(
                       child: ListView(
                         controller: _scrollController,
-                        children: messageWidgets,
+                        children: dbMessageWidgets,
                       ),
                     );
                   } else {
@@ -192,14 +181,15 @@ class _ChatScreenState extends State<ChatScreen> {
                     shape: BoxShape.rectangle,
                     borderRadius: BorderRadius.circular(30.0),
                   ),
-                  // decoration: kMessageContainerDecoration,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
                       Expanded(
                         child: TextField(
                           onChanged: (value) {
-                            messageText = value;
+                            setState(() {
+                              messageText = value;
+                            });
                           },
                           controller: _textController,
                           decoration: kMessageTextFieldDecoration,
@@ -213,21 +203,53 @@ class _ChatScreenState extends State<ChatScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30.0),
                           ),
-                          onPressed: () {
+                          onPressed: () async {
                             if(messageText != ''){
-                              _firestore
+                              _textController.clear();
+                              while(!counterAccessPermit) {
+                                //loop until counterAccessPermit == true
+                                await _firestore.collection('groups').doc(hexGroupID).get().then(
+                                        (doc){
+                                      setState(() {
+                                        counterAccessPermit = doc.data()!['canAccess'];
+                                      });
+                                    }
+                                );
+                              }
+                              //set access permission to false for other incoming messages until this message gets updated
+                              await _firestore.collection('groups').doc(hexGroupID).update({
+                                'canAccess' : false,
+                              });
+                              //access the message counter to place the message widget at bottom
+                              await _firestore.collection('groups').doc(hexGroupID).get().then(
+                                  (doc){
+                                    setState(() {
+                                      messageCounter = doc.data()!['msgCounter'];
+                                    });
+                                  }
+                              );
+                              //add the message doc into the DB collection
+                              await _firestore
                                   .collection(ChatScreen.groupName)
-                                  .doc((++messageCounter).decToHex(20).toString())
+                                  .doc((messageCounter+1).decToHex(20).toString())
                                   .set({
                                 //SCHEMA FOR MESSAGE
-                                'docID': messageCounter,
+                                'docID': messageCounter+1,
                                 'sender': loggedInUser.email,
                                 'name': loggedInUser.displayName,
                                 'text': messageText
                               });
-                              _textController.clear();
-                              messageText = '';
-                              _scrollDown();
+                              //increment the message counter by one
+                              await _firestore.collection('groups').doc(hexGroupID).update({
+                                'msgCounter' : messageCounter+1,
+                              });
+                              //set the access permission to true
+                              await _firestore.collection('groups').doc(hexGroupID).update({
+                                'canAccess' : true,
+                              });
+                              setState(() {
+                                messageText = '';
+                              });
                             }
                           },
                           child: const Text(

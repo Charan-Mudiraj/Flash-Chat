@@ -4,6 +4,7 @@ import 'package:flashchat/resources/authentication_button.dart';
 import 'package:flashchat/resources/constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegistrationScreen extends StatefulWidget {
   static String id = 'registration_screen';
@@ -18,19 +19,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   late String email;
   late String password;
   bool showSpinner = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('images/background.png'),
-            fit: BoxFit.cover,
-          )
-        ),
-        child: ModalProgressHUD(
-          inAsyncCall: showSpinner,
+      body: ModalProgressHUD(
+        inAsyncCall: showSpinner,
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('images/background.png'),
+              fit: BoxFit.cover,
+            )
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
@@ -104,6 +106,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         var user = _auth.currentUser;
                         if(user != null){
                           await user.updateDisplayName(name);
+
+                          final SharedPreferences prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('isSignedIn', true);
+                          await prefs.setString('email', email);
+                          await prefs.setString('password', password);
+
                           Navigator.pushNamed(context, GroupScreen.id);
                         }
                         setState(() {

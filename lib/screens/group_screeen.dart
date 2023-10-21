@@ -3,6 +3,7 @@ import 'package:flashchat/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../resources/alert_box.dart';
 import '../resources/group_box.dart';
 
@@ -17,7 +18,6 @@ class GroupScreen extends StatefulWidget {
 class _GroupScreenState extends State<GroupScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
-
   Future _logoutAlert(){
     return showDialog(
       context: context,
@@ -30,10 +30,15 @@ class _GroupScreenState extends State<GroupScreen> {
             ),
             title: 'Confirm logout',
             description: 'Are you sure you want to logout?',
-            onYes: () {
+            onYes: () async {
               _auth.signOut();
-              Navigator.popUntil(
-                  context, ModalRoute.withName(WelcomeScreen.id));
+
+              final SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isSignedIn', false);
+              await prefs.remove('email');
+              await prefs.remove('password');
+
+              Navigator.popUntil(context, ModalRoute.withName(WelcomeScreen.id));
             },
           ),
     );

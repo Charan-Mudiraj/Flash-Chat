@@ -41,6 +41,7 @@ dependencies:
   cloud_firestore: ^4.9.3
   modal_progress_hud_nsn: ^0.4.0
   number_system: ^0.0.6+8
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

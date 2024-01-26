@@ -83,7 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   title: 'Confirm deletion',
                   description:
-                      'Are you sure you want to delete all the messages?',
+                  'Are you sure you want to delete all the messages?',
                   onYes: (){
                     _firestore.collection(ChatScreen.groupName).get().then((snapShot){
                       for(QueryDocumentSnapshot doc in snapShot.docs){
@@ -106,9 +106,9 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Container(
         decoration: const BoxDecoration(
             image: DecorationImage(
-          image: AssetImage('images/img.jpg'),
-          fit: BoxFit.cover,
-        )),
+              image: AssetImage('images/img.jpg'),
+              fit: BoxFit.cover,
+            )),
         child: SafeArea(
           child: Column(
             children: <Widget>[
@@ -223,7 +223,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               });
                               //[3] access the message counter to place the message widget at bottom
                               await _firestore.collection('groups').doc(hexGroupID).get().then(
-                                  (doc){
+                                      (doc){
                                     setState(() {
                                       messageCounter = doc.data()!['msgCounter'];
                                     });

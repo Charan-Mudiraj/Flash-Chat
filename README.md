@@ -49,3 +49,7 @@ messages in chronological order and avoiding Read-Write conflicts.
 9. Code of Producer-Consumer approach for synchronizing Firebase messages list in chronological order and avoiding read-write conflicts.
 
    <img src="./views/9.jpg">
+
+10. Above code in action, on DB.
+
+      <img src="./views/10.gif" height="250px">
